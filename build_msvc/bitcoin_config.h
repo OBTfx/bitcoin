@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 The Bitcoin Core developers
+// Copyright (c) 2018-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -40,9 +40,6 @@
 
 /* Define to 1 to enable ZMQ functions */
 #define ENABLE_ZMQ 1
-
-/* parameter and return value type for __fdelt_chk */
-/* #undef FDELT_TYPE */
 
 /* define if the Boost library is available */
 #define HAVE_BOOST /**/

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2017-2019 The Bitcoin Core developers
+# Copyright (c) 2017-2020 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test message sending before handshake completion.
@@ -37,7 +37,7 @@ class CLazyNode(P2PInterface):
 
     def bad_message(self, message):
         self.unexpected_msg = True
-        self.log.info("should not have received message: %s" % message.command)
+        self.log.info("should not have received message: %s" % message.msgtype)
 
     def on_open(self):
         self.ever_connected = True
@@ -141,12 +141,11 @@ class P2PLeakTest(BitcoinTestFramework):
         assert no_verack_idlenode.unexpected_msg == False
 
         self.log.info('Check that the version message does not leak the local address of the node')
-        time_begin = int(time.time())
         p2p_version_store = self.nodes[0].add_p2p_connection(P2PVersionStore())
-        time_end = time.time()
         ver = p2p_version_store.version_received
-        assert_greater_than_or_equal(ver.nTime, time_begin)
-        assert_greater_than_or_equal(time_end, ver.nTime)
+        # Check that received time is within one hour of now
+        assert_greater_than_or_equal(ver.nTime, time.time() - 3600)
+        assert_greater_than_or_equal(time.time() + 3600, ver.nTime)
         assert_equal(ver.addrFrom.port, 0)
         assert_equal(ver.addrFrom.ip, '0.0.0.0')
         assert_equal(ver.nStartingHeight, 201)

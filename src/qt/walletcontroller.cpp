@@ -1,4 +1,4 @@
-// Copyright (c) 2019 The Bitcoin Core developers
+// Copyright (c) 2019-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,6 +14,7 @@
 #include <interfaces/handler.h>
 #include <interfaces/node.h>
 #include <util/string.h>
+#include <util/translation.h>
 #include <wallet/wallet.h>
 
 #include <algorithm>
@@ -89,6 +90,23 @@ void WalletController::closeWallet(WalletModel* wallet_model, QWidget* parent)
     wallet_model->wallet().remove();
     // Now release the model.
     removeAndDeleteWallet(wallet_model);
+}
+
+void WalletController::closeAllWallets(QWidget* parent)
+{
+    QMessageBox::StandardButton button = QMessageBox::question(parent, tr("Close all wallets"),
+        tr("Are you sure you wish to close all wallets?"),
+        QMessageBox::Yes|QMessageBox::Cancel,
+        QMessageBox::Yes);
+    if (button != QMessageBox::Yes) return;
+
+    QMutexLocker locker(&m_mutex);
+    for (WalletModel* wallet_model : m_wallets) {
+        wallet_model->wallet().remove();
+        Q_EMIT walletRemoved(wallet_model);
+        delete wallet_model;
+    }
+    m_wallets.clear();
 }
 
 WalletModel* WalletController::getOrCreateWallet(std::unique_ptr<interfaces::Wallet> wallet)
@@ -226,6 +244,9 @@ void CreateWalletActivity::createWallet()
     if (m_create_wallet_dialog->isMakeBlankWalletChecked()) {
         flags |= WALLET_FLAG_BLANK_WALLET;
     }
+    if (m_create_wallet_dialog->isDescriptorWalletChecked()) {
+        flags |= WALLET_FLAG_DESCRIPTORS;
+    }
 
     QTimer::singleShot(500, worker(), [this, name, flags] {
         WalletCreationStatus status;
@@ -241,10 +262,10 @@ void CreateWalletActivity::finish()
 {
     destroyProgressDialog();
 
-    if (!m_error_message.empty()) {
-        QMessageBox::critical(m_parent_widget, tr("Create wallet failed"), QString::fromStdString(m_error_message));
+    if (!m_error_message.original.empty()) {
+        QMessageBox::critical(m_parent_widget, tr("Create wallet failed"), QString::fromStdString(m_error_message.translated));
     } else if (!m_warning_message.empty()) {
-        QMessageBox::warning(m_parent_widget, tr("Create wallet warning"), QString::fromStdString(Join(m_warning_message, "\n")));
+        QMessageBox::warning(m_parent_widget, tr("Create wallet warning"), QString::fromStdString(Join(m_warning_message, Untranslated("\n")).translated));
     }
 
     if (m_wallet_model) Q_EMIT created(m_wallet_model);
@@ -282,10 +303,10 @@ void OpenWalletActivity::finish()
 {
     destroyProgressDialog();
 
-    if (!m_error_message.empty()) {
-        QMessageBox::critical(m_parent_widget, tr("Open wallet failed"), QString::fromStdString(m_error_message));
+    if (!m_error_message.original.empty()) {
+        QMessageBox::critical(m_parent_widget, tr("Open wallet failed"), QString::fromStdString(m_error_message.translated));
     } else if (!m_warning_message.empty()) {
-        QMessageBox::warning(m_parent_widget, tr("Open wallet warning"), QString::fromStdString(Join(m_warning_message, "\n")));
+        QMessageBox::warning(m_parent_widget, tr("Open wallet warning"), QString::fromStdString(Join(m_warning_message, Untranslated("\n")).translated));
     }
 
     if (m_wallet_model) Q_EMIT opened(m_wallet_model);

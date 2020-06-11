@@ -16,11 +16,16 @@
 #include <validation.h>
 #include <validationinterface.h>
 
-const RegTestingSetup* g_setup;
+const TestingSetup* g_setup;
 
 void initialize()
 {
-    static RegTestingSetup setup{};
+    static TestingSetup setup{
+        CBaseChainParams::REGTEST,
+        {
+            "-nodebuglogfile",
+        },
+    };
     g_setup = &setup;
 
     for (int i = 0; i < 2 * COINBASE_MATURITY; i++) {
@@ -70,6 +75,7 @@ void test_one_input(const std::vector<uint8_t>& buffer)
         } catch (const std::ios_base::failure&) {
         }
     }
-    connman.ClearTestNodes();
     SyncWithValidationInterfaceQueue();
+    LOCK2(::cs_main, g_cs_orphans); // See init.cpp for rationale for implicit locking order requirement
+    g_setup->m_node.connman->StopNodes();
 }
